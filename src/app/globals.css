@@ -1,0 +1,14 @@
+/* GradeFlow AI styles. Each file below holds one area; the order matters (later files override earlier ones), so keep it. */
+@import '../styles/01-tokens-and-base.css';
+@import '../styles/02-layout.css';
+@import '../styles/03-shared-ui.css';
+@import '../styles/04-upload-and-processing.css';
+@import '../styles/05-verification.css';
+@import '../styles/06-report-card-and-generated.css';
+@import '../styles/07-workspace-toast-modal.css';
+@import '../styles/08-dark-mode-overrides.css';
+@import '../styles/09-responsive-and-print.css';
+@import '../styles/10-documents-sf9-sf10-layout.css';
+@import '../styles/11-motion-and-reading.css';
+@import '../styles/12-sf10-browser-and-editing.css';
+@import '../styles/13-ux-additions.css';
