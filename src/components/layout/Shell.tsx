@@ -113,11 +113,6 @@ export function Shell({ children }: { children: ReactNode }) {
             <span>Steps for preparing and printing report cards.</span>
             <span className="help-link">Open the guide <Icon name="arrow-right" /></span>
           </Link>
-          <Link className="teacher-card" href="/settings" aria-label="Open workspace settings">
-            <span className="avatar avatar-sm"><Icon name="settings" /></span>
-            <span className="teacher-text"><strong>Settings</strong><span>Class and report details</span></span>
-            <Icon name="chevron-right" />
-          </Link>
         </div>
       </aside>
       {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
