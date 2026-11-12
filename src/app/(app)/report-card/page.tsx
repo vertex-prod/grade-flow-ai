@@ -279,6 +279,8 @@ export default function ReportCardPage() {
                 setState({ students: result.students, school, year: details.year.trim() || state.year });
                 toast(result.changed || globalChange ? `Updated ${result.changed} learner${result.changed === 1 ? '' : 's'}${globalChange ? ' and the school details' : ''}.` : 'Nothing to change. The fields were empty, or already filled in (turn on "Replace values already filled in").', result.changed || globalChange ? 'success' : 'info');
               }}>Apply</button>
+            </div>
+            <div className="sf10-actions sf10-ai-actions">
               <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'values' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'values'} style={deciding?.what === 'values' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('values')}
                 title="The AI drafts the observed values (AO, SO, RO, NO) from each learner's grades. Attendance is not changed.">
                 <Icon name="sparkles" className="ai-sparkle" />
