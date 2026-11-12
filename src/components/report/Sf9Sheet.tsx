@@ -44,7 +44,7 @@ export function Sf9Sheet({ student, context, state, side }: { student: Student; 
 
   if (side === 'front') {
     return (
-      <div className="sf9-sheet sf9-front">
+      <div className="sf9-sheet">
         <h2 className="sf9-title">REPORT ON LEARNING PROGRESS AND ACHIEVEMENT</h2>
         {semestersFor(student.strand || state.strand).map((semester) => {
           const average = semesterAverage(student, semester.key);
