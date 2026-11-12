@@ -28,6 +28,7 @@ const list = (v: string | undefined) => (v ?? '').split(',').map((x) => x.trim()
  *   AI_PROVIDER / AI_API_KEY     the main provider (still works on its own, as before)
  *   AI_PROVIDERS                 optional order, e.g. "gemini,groq,openrouter"
  *   GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY   one key per provider; several keys can be comma-separated
+ *   GROQ_MODEL, OPENROUTER_MODEL, GEMINI_MODEL          optional model for that provider (AI_MODEL only changes the main one)
  * A provider with no key is skipped. If one fails (quota, busy, bad key) the next one answers.
  */
 export function slots(): Slot[] {
@@ -42,7 +43,7 @@ export function slots(): Slot[] {
     const preset = PROVIDERS[name];
     const main = name === primary;
     const base = (main && process.env.AI_BASE_URL ? process.env.AI_BASE_URL : preset.base).replace(/\/$/, '');
-    const model = (main && process.env.AI_MODEL) || preset.model;
+    const model = (main && process.env.AI_MODEL) || process.env[`${name.toUpperCase()}_MODEL`]?.trim() || preset.model; // GROQ_MODEL etc. choose a model for a backup provider
     if (!preset.needsKey) {
       if (main || listed.includes(name)) out.push({ name, base, model, key: '', needsKey: false }); // e.g. Ollama: only when asked for
       continue;

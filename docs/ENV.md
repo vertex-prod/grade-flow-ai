@@ -20,6 +20,9 @@ AI_ROTATE=0
 # Optional: model / base URL of the main provider
 AI_MODEL=
 AI_BASE_URL=
+# Optional: model for a backup provider, e.g. a stronger Groq model
+GROQ_MODEL=
+OPENROUTER_MODEL=
 
 # ---- Limits (all OFF by default; 0 = no limit) ----
 # Require this code to use the AI import (set it when others can reach the server)
