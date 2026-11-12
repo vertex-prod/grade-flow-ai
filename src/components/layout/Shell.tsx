@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { Brand } from '@/components/layout/Brand';
 import { useUi } from '@/components/layout/Providers';
 import { SaveStatus } from '@/components/layout/SaveStatus';
+import { useTheme } from '@/components/layout/useTheme';
 import { PAGE_META, STEP_ORDER } from '@/lib/domain/curriculum';
 import { pathFor, pageForPath } from '@/lib/domain/routes';
 import { formatDate } from '@/lib/domain/format';
@@ -24,21 +26,6 @@ const STEPS: { page: PageId; label: string }[] = [
   { page: 'upload', label: 'Upload' }, { page: 'report-card', label: 'SF9' },
   { page: 'sf10', label: 'SF10' }
 ];
-
-function useTheme() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  useEffect(() => {
-    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
-  }, []);
-  const toggle = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('theme', next); } catch { /* storage may be blocked */ }
-    setTheme(next);
-  };
-  return { theme, toggle };
-}
-export { useTheme };
 
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -92,14 +79,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="sidebar" aria-label="Main navigation">
-        <Link className="brand" href={pathFor('upload')} aria-label="GradeFlow AI home">
-          <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
-            <rect width="64" height="64" rx="16" fill="currentColor" />
-            <path d="M44.3 23.4A15 15 0 1 0 47 32" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
-            <path d="M34 32h13" fill="none" stroke="#f5a524" strokeWidth="6" strokeLinecap="round" />
-          </svg>
-          <span className="brand-name">Grade<span>Flow</span><b>AI</b></span>
-        </Link>
+        <Brand href={pathFor('upload')} />
         <nav className="nav-links">
           {NAV.map((item) => (
             <Link key={item.page} href={pathFor(item.page)} className={`nav-link nav-action${meta.nav === item.page ? ' active' : ''}`} aria-current={meta.nav === item.page ? 'page' : undefined}>
@@ -108,6 +88,7 @@ export function Shell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
+          <Link className="nav-link" href="/login"><Icon name="log-out" /><span>Sign out</span></Link>
           <Link className="help-card" href={pathFor('help')}>
             <span className="help-icon"><Icon name="help" /></span>
             <strong>Help</strong>

@@ -4,7 +4,7 @@
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { useTheme } from '@/components/layout/Shell';
+import { useTheme } from '@/components/layout/useTheme';
 import { prettyYear } from '@/lib/domain/format';
 import { pathFor } from '@/lib/domain/routes';
 import { useAppState } from '@/lib/state/store';

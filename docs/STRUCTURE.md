@@ -7,6 +7,7 @@ Grade_flow_AI/
   src/
     app/                  FRONTEND pages + routing
       (app)/              upload, verification, report-card, generated-reports, sf10, summary, history, settings, help
+      (auth)/             temporary design-only screens: login, signup, forgot-password
       api/                BACKEND entry points (thin): import, import-sf10, observed-values, health
     components/           FRONTEND UI: layout/, report/ (SF9, SF10 sheets), ui/
     lib/                  FRONTEND logic: domain/, state/, sf9/, sf10/, pdf/
