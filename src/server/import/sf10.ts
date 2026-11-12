@@ -22,6 +22,7 @@ const SEMESTER = obj({
 
 export const SF10_TOOL: Tool = {
   name: 'submit_sf10',
+  omitEmpty: true,
   description: 'Report the SF10 record exactly as written in the sheet. Leave a field empty when the sheet does not show it. Never invent or compute values.',
   input_schema: obj({
     learner: obj({ lastName: T, firstName: T, middleName: T, lrn: T, birthdate: { type: 'string', description: 'Date of birth as shown' }, sex: T }),
@@ -162,11 +163,20 @@ export async function runImportSf10(grids: Grid[], opts: { caller?: Caller; spen
       throw error;
     }
   };
-  const results: { student: Student | null; warnings: string[] }[] = [];
-  for (let i = 0; i < grids.length; i += 4) {
-    results.push(...(await Promise.all(grids.slice(i, i + 4).map((g, k) => one(g, i + k)))));
-    onProgress?.(results.length, grids.length);
-  }
+  // A sliding window, not fixed batches: a slow sheet no longer holds back the sheets behind it.
+  const results: { student: Student | null; warnings: string[] }[] = new Array(grids.length);
+  const width = Math.max(1, Number(process.env.AI_CONCURRENCY) || 4);
+  let next = 0, finished = 0, failure: unknown = null;
+  const worker = async () => {
+    while (!failure && next < grids.length) {
+      const i = next++;
+      try { results[i] = await one(grids[i], i); } catch (error) { failure = error; return; }
+      finished += 1;
+      onProgress?.(finished, grids.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(width, grids.length) }, worker));
+  if (failure) throw failure;
   const students = results.map((r) => r.student).filter((x): x is Student => Boolean(x));
   const warnings = results.flatMap((r) => r.warnings);
   if (!students.length) throw new MappingError(warnings[0] ?? 'No SF10 record was found in this file.', 'file');
