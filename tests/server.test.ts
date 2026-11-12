@@ -278,6 +278,33 @@ describe('sf10 roster mode', () => {
   });
 });
 
+describe('sf10 roster layout read by code (no AI)', () => {
+  const head = ['#', 'LAST NAME', 'FIRST NAME', 'GENDER', 'LRN', 'GRADE 11', '', '', 'GRADE 11', '', '', 'GRADE 11', '', '', 'GRADE 11', '', '', 'GRADE 11', '', ''];
+  const subj = ['', '', '', '', '', 'COR 001 - Oral Communication', '', '', 'STM 001 - Pre-Calculus', '', '', 'COR 002 - Reading and Writing', '', '', 'SSP 001', '', '', 'APP 005 - Practical Research 1', '', ''];
+  const qs = ['', '', '', '', '', 'Q1', 'Q2', 'FINAL', 'Q1', 'Q2', 'FINAL', 'Q1', 'Q2', 'FINAL', 'Q1', 'Q2', 'FINAL', 'Q1', 'Q2', 'FINAL'];
+  const data: unknown[][] = [
+    ['1', 'CULLO', 'PRINCESS', 'FEMALE', '117624130043', 84, 86, 85, 80, 81, 81, 75, 75, 75, 'C', 'C', 'C', 0, 0, 0],
+    ['2', 'REYES', 'JUAN', 'MALE', '123456789012', 78, 82, 80, '', '', 0, 88, 90, 89, '', '', '', 70, 72, 71]
+  ];
+  it('maps columns from the header text, drops 0 placeholders and letter marks, and splits semesters from the subject order', async () => {
+    const { runRosterImport } = await import('@/server/import/sf10Roster');
+    const grid = readSheets('x.xlsx', workbook([head, subj, qs, ...data]))[0];
+    const out = await runRosterImport(grid); // no caller: must not need the AI
+    expect(out.students).toHaveLength(2);
+    const a = out.students[0].sf10!.semesters;
+    expect(a.map((s) => `${s.gradeLevel}-${s.sem}`)).toEqual(['11-1', '11-2']);
+    expect(a[0].rows.map((r) => [r.subject, r.q1, r.q2, r.final])).toEqual([['Oral Communication', '84', '86', '85'], ['Pre-Calculus', '80', '81', '81']]);
+    expect(a[1].rows).toHaveLength(1); // SSP 'C' and the 0 placeholders are not grades
+    expect(out.students[1].sf10!.semesters[0].rows.map((r) => r.subject)).toEqual(['Oral Communication']); // 0 final = no Pre-Calculus
+    expect(out.students[0].lrn).toBe('117624130043');
+    expect(out.students[0].sex).toBe('FEMALE');
+  });
+  it('returns null when there are no Q1/Q2/FINAL headers, so the AI mapping is used instead', async () => {
+    const { detectRosterLayout } = await import('@/server/import/rosterLayout');
+    expect(detectRosterLayout(readSheets('x.xlsx', workbook([['A', 'B'], ['1', '2']]))[0])).toBeNull();
+  });
+});
+
 describe('toCol', () => {
   it('accepts numbers, numeric strings, "7(H)" and letters', async () => {
     const { toCol } = await import('@/server/import/sf10Roster');

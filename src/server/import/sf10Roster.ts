@@ -7,6 +7,7 @@
 import { AiError, callAi, type Caller, type Tool } from '@/server/core/llm';
 import { gradeColumnWarnings, learnerColumnWarnings, listRows } from '@/server/import/checks';
 import { verifyClassDetails } from '@/server/import/details';
+import { detectRosterLayout } from '@/server/import/rosterLayout';
 import { colLetter, type Grid } from '@/server/import/extract';
 import { lrnText, MappingError, type ImportCounts } from '@/server/import/mapper';
 import type { Sf10Semester, Student } from '@/lib/domain/types';
@@ -97,6 +98,7 @@ const grade = (row: unknown[], c: number): string => {
   const t = cell(row, c).replace(/%$/, '');
   if (!t || Number.isNaN(Number(t))) return '';
   const n = Number(t);
+  if (n === 0) return ''; // a 0 in an unused subject column is a placeholder, not a grade
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
 };
 const FOOTER = /^(total|average|ave\.?|mean|passed|failed|remarks?|prepared by|checked by|noted by)\b/i;
@@ -164,11 +166,11 @@ export function buildRoster(raw: Raw, grid: Grid): { students: Student[]; warnin
   const subjects = ((raw.subjects as Raw[]) ?? []).map((s) => ({
     code: String(s.code ?? '').trim(), name: String(s.name ?? '').replace(/\s+/g, ' ').trim().slice(0, 90), category: category(s.category),
     gradeLevel: String(s.gradeLevel ?? '').replace(/\D/g, '').slice(0, 2) || '', sem: String(s.sem ?? '').replace(/\D/g, '').slice(0, 1) === '2' ? '2' : '1',
-    q1: col(s.q1, width), q2: col(s.q2, width), final: col(s.final, width)
+    q1: col(s.q1, width), q2: col(s.q2, width), final: col(s.final, width), locked: s.semLocked === true
   })).filter((s) => s.name && (s.final >= 0 || s.q1 >= 0));
   if (!subjects.length) throw new MappingError(`Sheet "${grid.sheet}": no subject grade columns were found.`, 'file');
 
-  splitSemesters(subjects, warnings);
+  splitSemesters(subjects.filter((s) => !s.locked), warnings); // locked = the semester was already read from the subject order
 
   // Blocks in column order, e.g. Grade 11 sem 1, Grade 11 sem 2, Grade 12 sem 1...
   const blocks: { key: string; gradeLevel: string; sem: string }[] = [];
@@ -264,15 +266,19 @@ export function buildRoster(raw: Raw, grid: Grid): { students: Student[]; warnin
   return { students, warnings, counts };
 }
 
-export async function runRosterImport(grid: Grid, caller: Caller = callAi, spend?: () => void, emit?: (percent: number, label: string) => void) {
-  let raw: Record<string, unknown>;
-  try {
-    spend?.();
-    emit?.(10, 'Mapping the columns');
-    raw = await caller(buildRosterPrompt(grid), ROSTER_TOOL, 8000);
-  } catch (error) {
-    if (error instanceof AiError) throw new MappingError(error.message, error.kind === 'config' ? 'config' : 'ai');
-    throw error;
+export async function runRosterImport(grid: Grid, caller?: Caller, spend?: () => void, emit?: (percent: number, label: string) => void) {
+  // Code first: a header row with Q1 / Q2 / FINAL blocks is read exactly. The AI is only the fallback (or an injected test caller).
+  let raw: Record<string, unknown> | null = caller ? null : detectRosterLayout(grid);
+  if (raw) emit?.(40, 'Reading the column headers');
+  else {
+    try {
+      spend?.();
+      emit?.(10, 'Mapping the columns');
+      raw = await (caller ?? callAi)(buildRosterPrompt(grid), ROSTER_TOOL, 8000);
+    } catch (error) {
+      if (error instanceof AiError) throw new MappingError(error.message, error.kind === 'config' ? 'config' : 'ai');
+      throw error;
+    }
   }
   emit?.(80, 'Copying each learner\'s grades');
   const { students, warnings, counts } = buildRoster(raw, grid);

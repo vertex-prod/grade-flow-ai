@@ -4,6 +4,14 @@
 2. **SF10** (`POST /api/import-sf10`): an SF10 is a form, so the AI reads the whole sheet (one learner per sheet) and returns the record. Every grade it returns is checked against the sheet's own cells; a value that is not in the sheet is dropped.
 
 
+## School grading workbooks (SF10 "roster mode")
+
+A workbook with learners in rows and Q1 / Q2 / FINAL blocks per subject is read **by code, without the AI** (`src/server/import/rosterLayout.ts`): learner columns come from the header text, every subject block from its FINAL header with the name and grade level written above it. The AI mapping is only a fallback when those headers are not found.
+
+- A `0` in a grade cell is treated as an empty placeholder; letter marks such as `C` are not numeric grades and are not copied (a warning says so).
+- The sheet usually does not name the semesters. Within a grade level, the first COR/APP subject that follows strand subjects starts the 2nd semester. This is reported as a warning ("Please check").
+- Checked on a real 951-learner workbook: every grade cell matched the Excel file (100,992 cells, 0 differences).
+
 ## Class details accuracy
 
 The AI also reads class details (school, adviser, principal, section, school year, grade level, track). These are checked by code in `src/server/import/details.ts`:

@@ -13,15 +13,17 @@ export function gradeColumnWarnings(grid: Grid, first: number, columns: { col: n
   const rows = rowsFrom(grid, first);
   const out: string[] = [];
   for (const { col, label } of columns) {
-    let filled = 0, bad = 0;
+    let filled = 0, bad = 0, marks = 0;
     for (const row of rows) {
       const t = text(row, col).replace(/%$/, '');
       if (!t) continue;
+      if (/^[A-Za-z]{1,4}$/.test(t)) { marks += 1; continue; } // a letter mark such as C (credited) is not a grade, and not a wrong column
       filled += 1;
       const n = Number(t);
       if (Number.isNaN(n) || n < 0 || n > 100) bad += 1;
     }
-    if (!filled) out.push(`${label}: the mapped column is empty. Check that the right column was used.`);
+    if (!filled && marks) out.push(`${label}: holds only letter marks such as 'C' (${marks} cells), not numeric grades, so nothing was copied.`);
+    else if (!filled) out.push(`${label}: the mapped column is empty. Check that the right column was used.`);
     else if (bad / filled > 0.2) out.push(`${label}: ${bad} of ${filled} values are not grades between 0 and 100. The wrong column may have been used.`);
   }
   return out;
