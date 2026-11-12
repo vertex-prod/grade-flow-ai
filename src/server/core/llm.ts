@@ -89,7 +89,8 @@ async function callSlot({ name, base, model, key }: Slot, prompt: string, tool: 
     response_format: { type: 'json_object' },
     messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }]
   };
-  if (name === 'gemini') body.reasoning_effort = 'none';
+  // Gemini 2.x accepts "none"; Gemini 3.x rejects it (HTTP 400), so use the lowest level it allows.
+  if (name === 'gemini') body.reasoning_effort = /gemini-(?:[3-9]|\d{2,})/.test(model) ? 'minimal' : 'none';
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}) };
 
   let res: Response | null = null;

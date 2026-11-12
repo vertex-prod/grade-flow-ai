@@ -34,11 +34,6 @@ export function Reading({ fileName, kind }: { fileName: string; kind: 'sf9' | 's
     }, 40);
     return () => window.clearInterval(id);
   }, []);
-  const [slow, setSlow] = useState(false);
-  useEffect(() => {
-    const id = window.setTimeout(() => setSlow(true), 25_000);
-    return () => window.clearTimeout(id);
-  }, []);
   const steps = STEPS[kind];
   const stage = percent >= 100 ? steps.length : STARTS.filter((s) => percent >= s).length - 1;
   return (
@@ -55,7 +50,6 @@ export function Reading({ fileName, kind }: { fileName: string; kind: 'sf9' | 's
       <div className="reading-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
         <span style={{ width: `${percent}%`, animation: 'none', background: 'var(--blue)', transition: 'width 0.3s var(--ease-soft)' }} />
       </div>
-      {slow && percent < 100 && <p className="reading-slow">This is taking longer than usual. The free AI can be slow when many people use it. You can keep waiting or press Cancel and try again.</p>}
       <ol className="reading-steps" aria-hidden="true">
         {steps.map((text, i) => (
           <li key={text} className={i < stage ? 'done' : i === stage ? 'current' : ''}>{text}</li>
