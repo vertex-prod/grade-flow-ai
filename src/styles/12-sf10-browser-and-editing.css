@@ -189,3 +189,9 @@
 .sf9-ai-item { display: grid; gap: 6px; align-content: start; }
 .sf9-ai-item .btn { justify-content: center; }
 .sf9-ai-item small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+/* Front page: stretch the two semester tables so the grades fill the A4 page and the legends sit at the bottom, with no empty gap. */
+.sf9-front { display: flex; flex-direction: column; }
+.sf9-front .sf9-semester { flex: 1 1 auto; display: flex; flex-direction: column; }
+.sf9-front .sf9-semester .sf9-table { flex: 1 1 auto; }
+.sf9-front .sf9-legends { flex: none; }
