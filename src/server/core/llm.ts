@@ -75,15 +75,18 @@ export function parseJson(text: string): Record<string, unknown> {
   return data as Record<string, unknown>;
 }
 
-export interface Tool { name: string; description?: string; input_schema: Record<string, unknown> }
+/** omitEmpty: the answer may leave out fields the sheet does not show. Far fewer output tokens, which is what makes big forms slow. */
+export interface Tool { name: string; description?: string; input_schema: Record<string, unknown>; omitEmpty?: boolean }
 export type Caller = (prompt: string, tool: Tool, maxTokens?: number) => Promise<Record<string, unknown>>;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let turn = 0; // AI_ROTATE=1: each request starts on the next key, so teachers share the quota evenly
 
 async function callSlot({ name, base, model, key }: Slot, prompt: string, tool: Tool, maxTokens: number, pauses: number[]): Promise<Record<string, unknown>> {
-  const system = 'You are a careful data-extraction engine. Reply with ONE JSON object only (no prose, no markdown) ' +
-    'that follows this JSON Schema exactly. Use empty strings or empty arrays when a value is not present.\n' + JSON.stringify(tool.input_schema);
+  const system = 'You are a careful data-extraction engine. Reply with ONE compact JSON object only (no prose, no markdown, no indentation) ' +
+    'that follows this JSON Schema. ' +
+    (tool.omitEmpty ? 'Leave out any field, object or array the sheet does not show; do not write empty values.' : 'Use empty strings or empty arrays when a value is not present.') +
+    '\n' + JSON.stringify(tool.input_schema);
   const body: Record<string, unknown> = {
     model, max_tokens: Math.max(maxTokens, 8192), temperature: 0,
     response_format: { type: 'json_object' },
