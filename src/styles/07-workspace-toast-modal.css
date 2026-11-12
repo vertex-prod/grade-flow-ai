@@ -5,7 +5,7 @@
 .history-list { border-top: 1px solid var(--border); }
 .history-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 13px 2px;
@@ -120,3 +120,12 @@
 .modal-body li .icon { width: 14px; height: 14px; margin-top: 1px; color: var(--blue); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .modal-actions .btn { min-width: 84px; }
+
+.row-menu { position: relative; }
+.row-menu-btn { padding-inline: 8px; }
+.row-menu-btn .icon { width: 15px; height: 15px; fill: currentColor; stroke: none; }
+.row-menu-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 140px; display: grid; padding: 4px; background: var(--white); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow-popover, 0 8px 24px rgba(0, 0, 0, 0.15)); }
+.row-menu-list a, .row-menu-list button { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font: inherit; font-size: 11px; font-weight: 600; color: var(--navy); text-align: left; text-decoration: none; background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.row-menu-list a:hover, .row-menu-list button:hover { background: var(--ice); }
+.row-menu-list .icon { width: 13px; height: 13px; }
+.row-menu-list .danger { color: #b42318; }

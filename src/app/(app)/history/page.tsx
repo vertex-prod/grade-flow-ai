@@ -3,12 +3,40 @@
 /** What is loaded in this browser (SF9 and SF10 sets), with delete (and Undo). */
 
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useUi } from '@/components/layout/Providers';
 import { removeSf10Undoable, removeSf9Undoable } from '@/lib/state/actions';
 import { formatDate, prettyYear } from '@/lib/domain/format';
 import { pathFor } from '@/lib/domain/routes';
 import { useAppState } from '@/lib/state/store';
+
+/** Three-dot menu: the main action (Continue / Open) and Delete. */
+function RowMenu({ label, href, openLabel, onDelete }: { label: string; href: string; openLabel: string; onDelete: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  return (
+    <div className="row-menu" ref={box}>
+      <button type="button" className="btn btn-secondary btn-sm row-menu-btn" aria-label={`Actions for ${label}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <Icon name="more" />
+      </button>
+      {open && (
+        <div className="row-menu-list" role="menu">
+          <Link role="menuitem" href={href} onClick={() => setOpen(false)}><Icon name="arrow-right" /> {openLabel}</Link>
+          <button type="button" role="menuitem" className="danger" onClick={() => { setOpen(false); onDelete(); }}><Icon name="x" /> Delete</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HistoryPage() {
   const state = useAppState();
@@ -52,13 +80,8 @@ export default function HistoryPage() {
                 </span>
               </div>
               <span className={`status-badge ${state.generated ? 'status-approved' : 'status-needs'}`}>{state.generated ? 'Ready' : 'Draft'}</span>
-              <Link className="btn btn-secondary btn-sm" href={pathFor(state.generated ? 'generated-reports' : 'report-card')}>
-                {state.generated ? 'Open current reports' : 'Continue'}
-              </Link>
-              <button type="button" className="btn btn-secondary btn-sm" aria-label="Delete the SF9 reports"
-                onClick={() => confirmDelete('the SF9 reports', `${count} learner${count === 1 ? '' : 's'} from ${state.className}.`, removeSf9Undoable)}>
-                <Icon name="x" /> Delete
-              </button>
+              <RowMenu label="the SF9 reports" href={pathFor(state.generated ? 'generated-reports' : 'report-card')} openLabel={state.generated ? 'Open' : 'Continue'}
+                onDelete={() => confirmDelete('the SF9 reports', `${count} learner${count === 1 ? '' : 's'} from ${state.className}.`, removeSf9Undoable)} />
             </div>
           )}
           {sf10Count > 0 && (
@@ -69,11 +92,8 @@ export default function HistoryPage() {
                 <span>{state.sf10File?.name ?? 'Built from the class grades'} · {sf10Count} learner{sf10Count === 1 ? '' : 's'}</span>
               </div>
               <span className="status-badge status-approved">Ready</span>
-              <Link className="btn btn-secondary btn-sm" href={pathFor('sf10')}>Open</Link>
-              <button type="button" className="btn btn-secondary btn-sm" aria-label="Delete the SF10 records"
-                onClick={() => confirmDelete('the SF10 records', `${sf10Count} learner${sf10Count === 1 ? '' : 's'} read from ${state.sf10File?.name ?? 'the file'}.`, removeSf10Undoable)}>
-                <Icon name="x" /> Delete
-              </button>
+              <RowMenu label="the SF10 records" href={pathFor('sf10')} openLabel="Open"
+                onDelete={() => confirmDelete('the SF10 records', `${sf10Count} learner${sf10Count === 1 ? '' : 's'} read from ${state.sf10File?.name ?? 'the file'}.`, removeSf10Undoable)} />
             </div>
           )}
           {count === 0 && sf10Count === 0 && (

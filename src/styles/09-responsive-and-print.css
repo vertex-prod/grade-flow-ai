@@ -70,8 +70,7 @@
   .reports-card-head { padding: 14px 14px 8px; }
   .reports-toolbar { padding-inline: 14px; }
   .workspace-settings-grid { grid-template-columns: 1fr; }
-  .history-row { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 9px; }
-  .history-row > .btn { grid-column: 2 / -1; justify-self: start; }
+  .history-row { grid-template-columns: 30px minmax(0, 1fr) auto auto; gap: 9px; }
   .app-footer { flex-direction: column; align-items: flex-start; gap: 7px; }
   .toast { right: 12px; bottom: 12px; }
   .table-footer { flex-wrap: wrap; }
@@ -102,7 +101,7 @@
   .table-tools { flex-wrap: wrap; }
   .table-tools .select-wrap { width: 100%; }
   .table-footer { gap: 7px; }
-  .history-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .history-row { grid-template-columns: 28px minmax(0, 1fr) auto auto; }
   .history-row .status-badge { font-size: 8px; }
   .workspace-details > div { gap: 8px; }
   .workspace-appearance { flex-wrap: wrap; }

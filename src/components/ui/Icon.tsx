@@ -1,5 +1,5 @@
 /** All interface icons as one local SVG sprite, plus the <Icon name="..."/> component. */
-export type IconName = 'layers' | 'upload' | 'sparkles' | 'clipboard-check' | 'file-text' | 'users' | 'user' | 'user-check' | 'history' | 'settings' | 'help' | 'bell' | 'moon' | 'sun' | 'search' | 'download' | 'x' | 'check' | 'check-circle' | 'cloud-upload' | 'file-sheet' | 'heart' | 'shield-check' | 'lock' | 'alert-triangle' | 'alert-circle' | 'pencil' | 'printer' | 'folder' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'arrow-left' | 'arrow-right' | 'arrow-up-right' | 'graduation-cap' | 'menu' | 'info' | 'refresh' | 'filter' | 'message' | 'calendar' | 'log-out';
+export type IconName = 'layers' | 'upload' | 'sparkles' | 'clipboard-check' | 'file-text' | 'users' | 'user' | 'user-check' | 'history' | 'settings' | 'help' | 'bell' | 'moon' | 'sun' | 'search' | 'download' | 'x' | 'check' | 'check-circle' | 'cloud-upload' | 'file-sheet' | 'heart' | 'shield-check' | 'lock' | 'alert-triangle' | 'alert-circle' | 'pencil' | 'printer' | 'folder' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'arrow-left' | 'arrow-right' | 'arrow-up-right' | 'graduation-cap' | 'menu' | 'info' | 'refresh' | 'filter' | 'message' | 'calendar' | 'log-out' | 'more';
 
 const SPRITE = `<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
 <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
@@ -17,6 +17,7 @@ const SPRITE = `<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12.83 2.18a2
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M21 4.22l-1.42 1.42M18.36 5.64l-1.42 1.42"/></symbol>
 <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
 <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
 <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12 11 14.5 15.5 10"/></symbol>
