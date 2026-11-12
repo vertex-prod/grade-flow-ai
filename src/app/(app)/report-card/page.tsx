@@ -41,7 +41,7 @@ export default function ReportCardPage() {
   const [details, setDetails] = useState<Sf9Details>(emptySf9Details);
   const [scope, setScope] = useState<'one' | 'shown' | 'all'>('shown');
   const [overwrite, setOverwrite] = useState(false);
-  const [deciding, setDeciding] = useState<{ done: number; total: number } | null>(null);
+  const [deciding, setDeciding] = useState<{ done: number; total: number; what: 'values' | 'attendance' } | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [side, setSide] = useState<'front' | 'back'>('front');
   const options = useMemo(() => {
@@ -110,23 +110,24 @@ export default function ReportCardPage() {
   }, [deciding?.done, deciding === null]); // eslint-disable-line react-hooks/exhaustive-deps
   const percent = deciding ? Math.min(99, Math.round((Math.min(deciding.total, deciding.done + creep) / deciding.total) * 100)) : 0;
   const decideCount = (scope === 'one' ? (student ? 1 : 0) : scope === 'shown' ? filtered.length : total);
-  async function decideValues() {
+  async function decideValues(what: 'values' | 'attendance') {
     const ids = new Set((scope === 'one' ? (student ? [student] : []) : scope === 'shown' ? filtered : students).map((x) => x.id));
     const list = state.students.filter((s) => ids.has(s.id));
     if (!list.length) return;
-    setDeciding({ done: 0, total: list.length });
+    setDeciding({ done: 0, total: list.length, what });
     try {
-      const { values, absences, error } = await askObservedValues(list, (done, all) => setDeciding({ done, total: all }));
+      const { values, absences, error } = await askObservedValues(list, (done, all) => setDeciding({ done, total: all, what }));
       // Read the state again: the teacher may have kept editing while the AI worked.
-      const first = applyObservedValues(getState().students, values, overwrite);
-      const second = applyAttendance(first.students, absences, overwrite);
-      const result = { students: second.students, changed: Math.max(first.changed, second.changed) };
+      const first = what === 'values' ? applyObservedValues(getState().students, values, overwrite) : { students: getState().students, changed: 0 };
+      const second = what === 'attendance' ? applyAttendance(first.students, absences, overwrite) : { students: first.students, changed: 0 };
+      const result = { students: second.students, changed: first.changed + second.changed };
+      const label = what === 'values' ? 'observed values' : 'attendance';
       setState({ students: result.students });
       const asked = list.length;
-      if (error) toast(`The AI filled ${result.changed} of ${asked} learners, then stopped. ${error.message} Press the button again to finish the rest.`, result.changed ? 'info' : 'error');
-      else toast(result.changed ? `The AI filled the observed values and attendance of ${result.changed} learner${result.changed === 1 ? '' : 's'}. Please review them in Edit back.` : 'Nothing to change. The observed values and attendance are already filled in (turn on "Replace values already filled in").', result.changed ? 'success' : 'info');
+      if (error) toast(`The AI filled the ${label} of ${result.changed} of ${asked} learners, then stopped. ${error.message} Press the button again to finish the rest.`, result.changed ? 'info' : 'error');
+      else toast(result.changed ? `The AI filled the ${label} of ${result.changed} learner${result.changed === 1 ? '' : 's'}. Please review them in Edit back.` : 'Nothing to change. The ${label} are already filled in (turn on "Replace values already filled in").', result.changed ? 'success' : 'info');
     } catch (error) {
-      toast(`The AI could not decide the observed values and attendance. ${(error as Error).message}`, 'error');
+      toast(`The AI could not decide the ${what === 'values' ? 'observed values' : 'attendance'}. ${(error as Error).message}`, 'error');
     } finally { setDeciding(null); }
   }
 
@@ -278,10 +279,15 @@ export default function ReportCardPage() {
                 setState({ students: result.students, school, year: details.year.trim() || state.year });
                 toast(result.changed || globalChange ? `Updated ${result.changed} learner${result.changed === 1 ? '' : 's'}${globalChange ? ' and the school details' : ''}.` : 'Nothing to change. The fields were empty, or already filled in (turn on "Replace values already filled in").', result.changed || globalChange ? 'success' : 'info');
               }}>Apply</button>
-              <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={Boolean(deciding)} style={deciding ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues()}
-                title="The AI drafts the observed values (AO, SO, RO, NO) and the monthly attendance (days absent and present) from each learner's grades.">
+              <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'values' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'values'} style={deciding?.what === 'values' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('values')}
+                title="The AI drafts the observed values (AO, SO, RO, NO) from each learner's grades. Attendance is not changed.">
                 <Icon name="sparkles" className="ai-sparkle" />
-                {deciding ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide observed values & attendance with AI (${decideCount})`}
+                {deciding?.what === 'values' ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide observed values with AI (${decideCount})`}
+              </button>
+              <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'attendance' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'attendance'} style={deciding?.what === 'attendance' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('attendance')}
+                title="The AI drafts the monthly attendance (school days, days present and absent) from each learner's grades. Observed values are not changed.">
+                <Icon name="sparkles" className="ai-sparkle" />
+                {deciding?.what === 'attendance' ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide attendance with AI (${decideCount})`}
               </button>
             </div>
           </div>
