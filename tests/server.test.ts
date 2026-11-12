@@ -23,7 +23,7 @@ function workbook(rows: unknown[][], name = 'Sheet1'): Buffer {
 
 describe('mapper', () => {
   it('copies values by the mapping and ignores formatting slips', async () => {
-    const rows = [['Title row'], ['Name', 'LRN', 'MIL Q1', 'MIL Q2', 'MIL Final'], ['Santos, Maria', 136388831130, 90, 92, 91], ['Total', '', '', '', '']];
+    const rows = [['Strand: ABM'], ['Name', 'LRN', 'MIL Q1', 'MIL Q2', 'MIL Final'], ['Santos, Maria', 136388831130, 90, 92, 91], ['Total', '', '', '', '']];
     const grid = readGrid('a.xlsx', workbook(rows));
     const caller = async () => ({
       header_row: 1, first_data_row: 2,
@@ -63,6 +63,32 @@ describe('extract', () => {
   });
 });
 
+describe('class details accuracy', () => {
+  const rows = [['School: Iloilo National High School', '', 'School Year:', 'SY 2024 - 25'], ['Adviser:', 'MS. GALLO', 'Grade Level: Grade 12'], ['Name', 'LRN', 'MIL Q1'], ['Santos, Maria', 136388831130, 90]];
+  const base = { header_row: 2, first_data_row: 3, columns: [{ col: 0, field: 'name' }, { col: 2, field: 'grade:media_information_literacy:q1' }] };
+  it('drops class details the sheet does not contain, keeps the ones it does', async () => {
+    const caller = async () => ({ ...base, class_details: { schoolName: 'Iloilo National High School', teacher: 'Mr. Reyes', principal: 'Dr. Invented', gradeLevel: '12' } });
+    const result = await runImport(readGrid('a.xlsx', workbook(rows)), schema, caller);
+    expect(result.classDetails.schoolName).toBe('Iloilo National High School');
+    expect(result.classDetails.principal).toBeUndefined();
+    expect(result.classDetails.gradeLevel).toBe('12');
+    expect(result.warnings.some((w) => w.includes('principal'))).toBe(true);
+  });
+  it('reads labelled cells by code and prefers the sheet over the AI', async () => {
+    const caller = async () => ({ ...base, class_details: { teacher: 'MS. GALO' } });
+    const result = await runImport(readGrid('a.xlsx', workbook(rows)), schema, caller);
+    expect(result.classDetails.teacher).toBe('MS. GALLO'); // spelling taken from the sheet
+    expect(result.classDetails.year).toBe('2024-2025'); // "SY 2024 - 25" written in the standard form
+    expect(result.warnings.some((w) => w.includes('MS. GALO'))).toBe(true);
+  });
+  it('normalises school year, grade level and semester', async () => {
+    const { normSy, normGrade, normSem } = await import('@/server/import/details');
+    expect([normSy('S.Y. 2024-2025'), normSy('2024/25'), normSy('2024-2027'), normSy('2024')]).toEqual(['2024-2025', '2024-2025', '', '']);
+    expect([normGrade('Grade 12'), normGrade('XI'), normGrade('')]).toEqual(['12', '11', '']);
+    expect([normSem('1st'), normSem('Second Semester'), normSem('x')]).toEqual(['1', '2', '']);
+  });
+});
+
 describe('sf10', () => {
   const rows = [['LAST NAME:', 'CULLO', 'FIRST NAME:', 'PRINCESS'], ['Core', 'General Mathematics', 78, 85, 82, 'PASSED']];
   const stub = async () => ({
@@ -75,6 +101,15 @@ describe('sf10', () => {
     expect(sem.rows[0]).toMatchObject({ q1: '78', q2: '', final: '82', action: 'PASSED' });
     expect(out.students[0].lrn).toBe('11762413');
     expect(out.warnings.some((w) => w.includes('99'))).toBe(true);
+  });
+  it('blanks a block header (school, adviser) that is not in the sheet and standardises the school year', async () => {
+    const sheet = [['LAST NAME:', 'CULLO', 'FIRST NAME:', 'PRINCESS'], ['School:', 'Iloilo NHS', 'SY:', '2024-2025', 'Grade:', 'Grade 11'], ['Core', 'General Mathematics', 78, 85, 82, 'PASSED']];
+    const caller = async () => ({
+      learner: { lastName: 'CULLO', firstName: 'PRINCESS' },
+      semesters: [{ school: 'Iloilo NHS', sy: 'SY 2024-2025', gradeLevel: 'Grade 11', sem: 'First', adviser: 'Ms. Invented', rows: [{ category: 'Core', subject: 'General Mathematics', q1: '78' }] }]
+    });
+    const sem = (await runImportSf10(readSheets('x.xlsx', workbook(sheet)), { caller })).students[0].sf10!.semesters[0];
+    expect(sem).toMatchObject({ school: 'Iloilo NHS', sy: '2024-2025', gradeLevel: '11', sem: '1', adviser: '' });
   });
   it('skips oversized sheets without calling the AI', async () => {
     const caller = vi.fn(stub);
@@ -185,10 +220,33 @@ describe('sf10 roster mode', () => {
     expect(a.sf10!.semesters[0].average).toBe('85');
     expect(a.sf10!.semesters[0].adviser).toBe('MS. GALLO');
     expect(a.sf10!.semesters[0].school).toBe(''); // a missing school stays blank, never the text "null"
-    expect(a.sf10!.semesters[0].sy).toBe('2024-2025');
+    expect(a.sf10!.semesters[0].sy).toBe(''); // "2024-2025" is not written in this sheet, so the AI's claim is dropped
+    expect(out.warnings.some((w) => w.includes('2024-2025') && w.includes('not found'))).toBe(true);
     // second learner has no second-semester grades, so that semester is left out (nothing invented)
     expect(out.students[1].sf10!.semesters).toHaveLength(1);
     expect(out.warnings.some((w) => w.includes('LRN'))).toBe(false);
+  });
+
+  it('uses each grade level\'s own section column and never invents a school year', async () => {
+    const { buildRoster } = await import('@/server/import/sf10Roster');
+    const sheet: unknown[][] = [
+      ['LRN', 'LAST NAME', 'GRADE 11 SECTION', 'GRADE 12 SECTION', 'G11', '', 'G12', ''],
+      ['', '', '', '', 'Q1', 'FINAL', 'Q1', 'FINAL'],
+      ['117624130043', 'CULLO', 'ABM11-1', 'ABM12-1', 84, 85, 88, 89]
+    ];
+    const grid = readSheets('x.xlsx', workbook(sheet))[0];
+    const raw = {
+      first_data_row: 3, learner: { lrn: 'A', lastName: 'B', section11: 'C', section12: 'D' },
+      subjects: [
+        { name: 'Oral Communication', gradeLevel: '11', sem: '1', q1: 'E', final: 'F' },
+        { name: 'Statistics', gradeLevel: '12', sem: '1', q1: 'G', final: 'H' }
+      ],
+      class_details: { year: '2024-2025', schoolName: 'Invented National High School' }
+    };
+    const out = buildRoster(raw, grid);
+    const sems = out.students[0].sf10!.semesters;
+    expect(sems.map((s) => `${s.gradeLevel}:${s.section}`)).toEqual(['11:ABM11-1', '12:ABM12-1']);
+    expect(sems.every((s) => s.sy === '' && s.school === '')).toBe(true);
   });
 
   it('keeps reading past total rows and reports skipped rows', async () => {

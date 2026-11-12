@@ -114,11 +114,21 @@ export function previewText(grid: Grid, limit = 15): string {
   return lines.join('\n');
 }
 
+/** The first rows with each cell's full text (no column indexes): where school, section, adviser and school year are written. */
+export function titleText(grid: Grid, rows = 12): string {
+  const lines: string[] = [];
+  grid.rows.slice(0, rows).forEach((row, r) => {
+    const cells = row.map((c) => String(c ?? '').replace(/\s+/g, ' ').trim().slice(0, 200)).filter(Boolean);
+    if (cells.length && cells.length <= 8) lines.push(`${r}: ${cells.join(' | ')}`); // wide rows are the grade header, not a title
+  });
+  return lines.join('\n') || '(none)';
+}
+
 /** Whole sheet as compact text: one line per row with 'colLetter=value' for non-empty cells. */
 export function fullText(grid: Grid): string {
   const lines: string[] = [];
   grid.rows.forEach((row, r) => {
-    const cells = row.map((c, i) => (has(c) ? `${colLetter(i)}=${String(c).replace(/\n/g, ' ').trim().slice(0, 90)}` : '')).filter(Boolean);
+    const cells = row.map((c, i) => (has(c) ? `${colLetter(i)}=${String(c).replace(/\n/g, ' ').trim().slice(0, 160)}` : '')).filter(Boolean);
     if (cells.length) lines.push(`${r + 1}: ${cells.join(' | ')}`);
   });
   return lines.join('\n');

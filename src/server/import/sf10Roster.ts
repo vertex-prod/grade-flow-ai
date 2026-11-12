@@ -6,6 +6,7 @@
  */
 import { AiError, callAi, type Caller, type Tool } from '@/server/core/llm';
 import { gradeColumnWarnings, learnerColumnWarnings, listRows } from '@/server/import/checks';
+import { verifyClassDetails } from '@/server/import/details';
 import { colLetter, type Grid } from '@/server/import/extract';
 import { lrnText, MappingError, type ImportCounts } from '@/server/import/mapper';
 import type { Sf10Semester, Student } from '@/lib/domain/types';
@@ -21,7 +22,7 @@ const ROSTER_TOOL: Tool = {
       learner: {
         type: 'object',
         description: 'Column LETTER of each learner field, or empty string when the sheet has no such column',
-        properties: { name: COL, lastName: COL, firstName: COL, middleName: COL, lrn: COL, sex: COL, birthdate: COL, section: COL, adviser: COL, strand: COL, jhsSchool: COL, jhsAverage: COL }
+        properties: { name: COL, lastName: COL, firstName: COL, middleName: COL, lrn: COL, sex: COL, birthdate: COL, section: COL, section11: COL, section12: COL, adviser: COL, strand: COL, jhsSchool: COL, jhsAverage: COL }
       },
       subjects: {
         type: 'array',
@@ -36,7 +37,7 @@ const ROSTER_TOOL: Tool = {
           required: ['name', 'gradeLevel', 'sem', 'final']
         }
       },
-      class_details: { type: 'object', additionalProperties: { type: 'string' }, description: 'schoolName, year (school year), track, strand' },
+      class_details: { type: 'object', additionalProperties: { type: 'string' }, description: 'schoolName, year (school year), track, strand. Include a key ONLY if that exact text is written in the sheet; never guess a school year or school name.' },
       warnings: { type: 'array', items: { type: 'string' } }
     },
     required: ['first_data_row', 'learner', 'subjects']
@@ -60,7 +61,7 @@ export function buildRosterPrompt(grid: Grid): string {
 usually for Grade 11 and Grade 12. Map its columns so an SF10 permanent record can be built for every learner. Call submit_roster_mapping exactly once.
 
 Below are the top rows. Each cell is written as COLUMNLETTER=value, so copy the column letter exactly as printed (for example H or AB).
-- learner: the column LETTER of name (full name), lastName, firstName, middleName, lrn, sex, birthdate, section, adviser, strand, jhsSchool (the junior high school the learner came from) and jhsAverage (junior high general average); use an empty string when missing.
+- learner: the column LETTER of name (full name), lastName, firstName, middleName, lrn, sex, birthdate, section, section11 (a column holding the GRADE 11 section), section12 (the GRADE 12 section), adviser, strand, jhsSchool (the junior high school the learner came from) and jhsAverage (junior high general average); use an empty string when missing.
 - first_data_row: the printed Row number of the first learner row (the first row with a real learner, after all header rows).
 - subjects: one entry per subject. Read the subject name from the header (drop codes like "COR 001 -" from the name but copy the code into the "code" field),
   its category (COR = Core, APP = Applied, anything else such as ABM/STM/SSP/SOC = Specialized), the grade level
@@ -152,7 +153,7 @@ export function buildRoster(raw: Raw, grid: Grid): { students: Student[]; warnin
   const cols = {
     name: col(L.name, width), last: col(L.lastName, width), first: col(L.firstName, width), middle: col(L.middleName, width),
     lrn: col(L.lrn, width), sex: col(L.sex, width), birth: col(L.birthdate, width), section: col(L.section, width),
-    adviser: col(L.adviser, width), strand: col(L.strand, width), jhsSchool: col(L.jhsSchool, width), jhsAverage: col(L.jhsAverage, width)
+    section11: col(L.section11, width), section12: col(L.section12, width), adviser: col(L.adviser, width), strand: col(L.strand, width), jhsSchool: col(L.jhsSchool, width), jhsAverage: col(L.jhsAverage, width)
   };
   if (cols.name < 0 && cols.last < 0 && cols.lrn < 0) console.warn('[sf10 roster] unusable learner mapping from the AI:', JSON.stringify(raw.learner)?.slice(0, 400));
   if (cols.name < 0 && cols.last < 0 && cols.lrn < 0) throw new MappingError(`Sheet "${grid.sheet}": could not find the learner name or LRN column.`, 'file');
@@ -177,11 +178,22 @@ export function buildRoster(raw: Raw, grid: Grid): { students: Student[]; warnin
   });
   blocks.sort((a, b) => Number(a.gradeLevel) - Number(b.gradeLevel) || Number(a.sem) - Number(b.sem));
 
-  const details: Record<string, string> = {};
+  const claimed: Record<string, string> = {};
   Object.entries((raw.class_details as Record<string, unknown>) ?? {}).forEach(([k, v]) => {
     const t = v == null ? '' : String(v).trim();
-    if (t && !/^(null|undefined|n\/a|none)$/i.test(t)) details[k] = t;
+    if (t && !/^(null|undefined|n\/a|none)$/i.test(t)) claimed[k] = t;
   });
+  // Only what the sheet really says: the AI must not invent a school, strand or school year.
+  const checked = verifyClassDetails(claimed, grid);
+  const details = checked.details;
+  warnings.push(...checked.warnings);
+  // One school year cannot belong to every grade level. Use it only when the sheet covers a single grade level.
+  const gradeLevels = new Set(blocks.map((b) => b.gradeLevel));
+  if (details.year && gradeLevels.size > 1) {
+    warnings.push(`The sheet shows school year ${details.year} but covers several grade levels, so the school year was left blank. Enter it for each grade level.`);
+    delete details.year;
+  }
+  const bySection = cols.section11 >= 0 || cols.section12 >= 0;
 
   const students: Student[] = [];
   const skipped = { footer: [] as number[], noGrades: [] as number[], nameless: [] as number[], blank: 0 };
@@ -197,7 +209,9 @@ export function buildRoster(raw: Raw, grid: Grid): { students: Student[]; warnin
     const footer = FOOTER.test(named.last || full);
     if (footer && !lrn) { skipped.footer.push(r + 1); continue; } // a subtotal or signature row, not the end of the list
 
-    const section = cell(row, cols.section), adviser = cell(row, cols.adviser);
+    const adviser = cell(row, cols.adviser);
+    // a grade-specific section column belongs to its own grade level only; a single "section" column is the learner's current section
+    const sectionFor = (level: string) => (bySection ? cell(row, level === '11' ? cols.section11 : level === '12' ? cols.section12 : -1) : cell(row, cols.section));
     const semesters: Sf10Semester[] = [];
     for (const block of blocks) {
       const rows = subjects.filter((s) => `${s.gradeLevel}-${s.sem}` === block.key).map((s) => ({
@@ -208,7 +222,7 @@ export function buildRoster(raw: Raw, grid: Grid): { students: Student[]; warnin
       const avg = finals.every(Boolean) ? Math.round(finals.reduce((a, b) => a + Number(b), 0) / finals.length) : null;
       semesters.push({
         school: details.schoolName ?? '', schoolId: '', gradeLevel: block.gradeLevel, sy: details.year ?? '', sem: block.sem,
-        track: cell(row, cols.strand) || details.track || details.strand || '', section, rows,
+        track: cell(row, cols.strand) || details.track || details.strand || '', section: sectionFor(block.gradeLevel), rows,
         average: avg === null ? '' : String(avg), averageAction: avg === null ? '' : avg >= 75 ? 'PASSED' : 'FAILED', remarks: '',
         adviser, principal: '', dateChecked: '',
         remedial: { from: '', to: '', school: '', schoolId: '', teacher: '', rows: [] }

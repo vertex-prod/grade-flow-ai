@@ -5,7 +5,8 @@
  */
 import { AiError, callAi, type Caller, type Tool } from '@/server/core/llm';
 import { gradeColumnWarnings, learnerColumnWarnings, listRows } from '@/server/import/checks';
-import { previewText, type Grid } from '@/server/import/extract';
+import { verifyClassDetails } from '@/server/import/details';
+import { previewText, titleText, type Grid } from '@/server/import/extract';
 import type { Student } from '@/lib/domain/types';
 
 export const LEARNER_FIELDS = ['roll', 'name', 'middleName', 'age', 'sex', 'lrn', 'birthdate'];
@@ -68,6 +69,13 @@ export function buildTool(): Tool {
   };
 }
 
+const CLASS_HELP = `  className   class title as shown, e.g. "Grade 12 - ABM 1" (only if the sheet writes one)
+  schoolName  name of the school;  schoolAddress  street/city line;  region, division, department as written (e.g. "Region VI", "Division of Iloilo")
+  year        school year, e.g. 2024-2025;  term  semester or grading period as written (e.g. "1st Semester");  gradeLevel  digits only, 11 or 12
+  strand      e.g. ABM, STEM, HUMSS, GAS, TVL;  track  e.g. Academic;  section  section name only
+  teacher     the class ADVISER's name;  principal  the school head's name (not the teacher, not a learner)
+  studentStatus, graduationStatus  only if a column/title states them`;
+
 export function buildPrompt(schema: ImportSchema, grid: Grid): string {
   const subjects = schema.subjects.map((s) => `- ${s.key}  =  ${s.name}  (semester: ${s.semester})`).join('\n');
   return `You map a Philippine Senior High School class gradebook spreadsheet onto a fixed schema.
@@ -93,7 +101,10 @@ Rules:
 - If a subject, period or learner column cannot be found, do not guess; add a short entry to \`warnings\`.
 - Never output grade values. You only describe the layout.
 
-Sheet "${grid.sheet}" (top rows):
+Title area, full text (class details are usually here, sometimes as "Label: value" in one cell):
+${titleText(grid)}
+
+Sheet "${grid.sheet}" (top rows, for the columns):
 ${previewText(grid)}
 `;
 }
@@ -278,6 +289,9 @@ export async function runImport(grid: Grid, schema: ImportSchema, caller: Caller
     throw error;
   }
   const { mapping, warnings } = validateMapping(raw, schema, grid.rows[0].length, grid.rows.length);
+  const checked = verifyClassDetails(mapping.details, grid); // drop details the sheet does not contain; read labelled cells by code
+  mapping.details = checked.details;
+  warnings.push(...checked.warnings);
   const { students, warnings: applyWarnings, counts } = applyMapping(grid, mapping, schema);
   const labels = headerLabels(grid, mapping.first, mapping.columns);
   const colOf = (field: string) => [...mapping.columns.entries()].find(([, f]) => f === field)?.[0];

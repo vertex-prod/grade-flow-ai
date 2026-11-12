@@ -5,6 +5,7 @@
  * the model could not have read from the sheet is dropped, never kept.
  */
 import { AiError, callAi, type Caller, type Tool } from '@/server/core/llm';
+import { appears, checkedText, normGrade, normSem, normSy, sheetText } from '@/server/import/details';
 import { fullText, type Grid } from '@/server/import/extract';
 import { MappingError } from '@/server/import/mapper';
 import type { Sf10Semester, Student } from '@/lib/domain/types';
@@ -45,6 +46,10 @@ Read it and call submit_sf10 exactly once.
   Skip empty rows.
 - Learner information, Eligibility for SHS Enrolment (checkboxes -> booleans), and the final SHS completion block
   (track accomplished, SHS general average, awards, graduation date, certified by, remarks/purpose, date issued).
+- Block header fields, exactly as the sheet writes them: school (name of school), schoolId, gradeLevel (11 or 12 only), sy (school year such as 2024-2025),
+  sem (1 or 2), track and strand (e.g. "Academic - ABM"), section. Do not carry a value from one block to another: read each block's own header.
+- adviser = the teacher who PREPARED the block; principal = the person who CERTIFIED it (school head). They are different people.
+- Names: copy the learner's last name, first name and middle name into their own fields; do not include "LAST NAME:" or similar labels.
 - If something is not on the sheet, leave it empty. Never calculate, guess or fix values. Put doubts in \`warnings\`.
 
 Sheet "${grid.sheet}" (row: column=value):
@@ -75,10 +80,14 @@ function checkedGrade(value: unknown, tk: Set<string>, where: string, warnings: 
 
 export function normalize(raw: Raw, grid: Grid, index: number): { student: Student; warnings: string[] } {
   const tk = tokens(grid);
+  const text = sheetText(grid);
   const warnings: string[] = ((raw.warnings as unknown[]) ?? []).map(String).filter((w) => w.trim());
   const learner: Raw = raw.learner ?? {};
   const last = s(learner.lastName), first = s(learner.firstName), middle = s(learner.middleName);
   if (!last && !first) throw new MappingError(`Sheet "${grid.sheet}": could not find the learner name.`, 'file');
+  [['last name', last], ['first name', first], ['middle name', middle]].forEach(([label, v]) => {
+    if (v && !appears(v, text)) warnings.push(`Learner ${label} '${v.slice(0, 40)}' was not found in the sheet. Check the spelling.`);
+  });
   const el: Raw = raw.eligibility ?? {};
   const bools = ['hsCompleter', 'jhsCompleter', 'peptPasser', 'alsPasser'];
   const eligibility: Record<string, string | boolean> = {};
@@ -98,15 +107,20 @@ export function normalize(raw: Raw, grid: Grid, index: number): { student: Stude
       };
     });
     const rem: Raw = sem.remedial ?? {};
+    const sy = normSy(sem.sy), level = normGrade(sem.gradeLevel), semNo = normSem(sem.sem);
+    if (s(sem.sy) && !sy) warnings.push(`${label}: school year '${s(sem.sy, 20)}' is not like 2024-2025; left blank.`);
+    else if (sy && !appears(sy.split('-')[0], text)) warnings.push(`${label}: school year ${sy} was not found in the sheet. Check it.`);
+    if (s(sem.gradeLevel) && !['11', '12'].includes(level)) warnings.push(`${label}: grade level '${s(sem.gradeLevel, 10)}' is not 11 or 12. Check it.`);
+    if (!semNo) warnings.push(`${label}: the semester was not clear; assumed ${n % 2 ? '1' : '2'}. Check it.`);
     semesters.push({
-      school: s(sem.school), schoolId: s(sem.schoolId, 20), gradeLevel: s(sem.gradeLevel, 10), sy: s(sem.sy, 20),
-      sem: s(sem.sem, 6).replace(/\D/g, '').slice(0, 1) || (n % 2 ? '1' : '2'),
-      track: s(sem.track), section: s(sem.section, 40), rows,
+      school: checkedText(sem.school, text, `${label} school`, warnings), schoolId: s(sem.schoolId, 20).replace(/\D/g, ''),
+      gradeLevel: ['11', '12'].includes(level) ? level : '', sy, sem: semNo || (n % 2 ? '1' : '2'),
+      track: checkedText(sem.track, text, `${label} track`, warnings), section: checkedText(sem.section, text, `${label} section`, warnings, 40), rows,
       average: checkedGrade(sem.average, tk, `${label} general average`, warnings),
       averageAction: s(sem.averageAction, 12).toUpperCase(), remarks: s(sem.remarks, 200),
-      adviser: s(sem.adviser), principal: s(sem.principal), dateChecked: s(sem.dateChecked, 20),
+      adviser: checkedText(sem.adviser, text, `${label} adviser`, warnings), principal: checkedText(sem.principal, text, `${label} principal`, warnings), dateChecked: s(sem.dateChecked, 20),
       remedial: {
-        from: s(rem.from, 20), to: s(rem.to, 20), school: s(rem.school), schoolId: s(rem.schoolId, 20), teacher: s(rem.teacher),
+        from: s(rem.from, 20), to: s(rem.to, 20), school: checkedText(rem.school, text, `${label} remedial school`, warnings), schoolId: s(rem.schoolId, 20), teacher: checkedText(rem.teacher, text, `${label} remedial teacher`, warnings),
         rows: ((rem.rows as Raw[]) ?? []).filter((x) => s(x.subject)).map((x) => ({
           category: s(x.category, 90), subject: s(x.subject, 90), final: s(x.final, 90), remedialMark: s(x.remedialMark, 90),
           recomputed: s(x.recomputed, 90), action: s(x.action, 90)
