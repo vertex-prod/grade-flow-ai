@@ -11,7 +11,7 @@ import { Sf9Sheet } from '@/components/report/Sf9Sheet';
 import { downloadReportCards, printReportCards } from '@/lib/pdf/sf9';
 import { approvedCount, reportContext } from '@/lib/domain/grading';
 import { applySf9Details, emptySf9Details, sf9Issues, TRANSFER_DETAILS, type Sf9Details } from '@/lib/sf9/quality';
-import { applyObservedValues, askObservedValues } from '@/lib/sf9/observed';
+import { applyAttendance, applyObservedValues, askObservedValues } from '@/lib/sf9/observed';
 import { learnerMeta } from '@/lib/sf10/record';
 import { formatFileSize } from '@/lib/domain/format';
 import { pathFor } from '@/lib/domain/routes';
@@ -116,15 +116,17 @@ export default function ReportCardPage() {
     if (!list.length) return;
     setDeciding({ done: 0, total: list.length });
     try {
-      const { values, error } = await askObservedValues(list, (done, all) => setDeciding({ done, total: all }));
+      const { values, absences, error } = await askObservedValues(list, (done, all) => setDeciding({ done, total: all }));
       // Read the state again: the teacher may have kept editing while the AI worked.
-      const result = applyObservedValues(getState().students, values, overwrite);
+      const first = applyObservedValues(getState().students, values, overwrite);
+      const second = applyAttendance(first.students, absences, overwrite);
+      const result = { students: second.students, changed: Math.max(first.changed, second.changed) };
       setState({ students: result.students });
       const asked = list.length;
       if (error) toast(`The AI filled ${result.changed} of ${asked} learners, then stopped. ${error.message} Press the button again to finish the rest.`, result.changed ? 'info' : 'error');
-      else toast(result.changed ? `The AI filled the observed values of ${result.changed} learner${result.changed === 1 ? '' : 's'}. Please review them in Edit back.` : 'Nothing to change. The observed values are already filled in (turn on "Replace values already filled in").', result.changed ? 'success' : 'info');
+      else toast(result.changed ? `The AI filled the observed values and attendance of ${result.changed} learner${result.changed === 1 ? '' : 's'}. Please review them in Edit back.` : 'Nothing to change. The observed values and attendance are already filled in (turn on "Replace values already filled in").', result.changed ? 'success' : 'info');
     } catch (error) {
-      toast(`The AI could not decide the observed values. ${(error as Error).message}`, 'error');
+      toast(`The AI could not decide the observed values and attendance. ${(error as Error).message}`, 'error');
     } finally { setDeciding(null); }
   }
 
@@ -277,9 +279,9 @@ export default function ReportCardPage() {
                 toast(result.changed || globalChange ? `Updated ${result.changed} learner${result.changed === 1 ? '' : 's'}${globalChange ? ' and the school details' : ''}.` : 'Nothing to change. The fields were empty, or already filled in (turn on "Replace values already filled in").', result.changed || globalChange ? 'success' : 'info');
               }}>Apply</button>
               <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={Boolean(deciding)} style={deciding ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues()}
-                title="The AI drafts the observed values (AO, SO, RO, NO) from each learner's grades. Attendance is not changed.">
+                title="The AI drafts the observed values (AO, SO, RO, NO) and the monthly attendance (days absent and present) from each learner's grades.">
                 <Icon name="sparkles" className="ai-sparkle" />
-                {deciding ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide observed values with AI (${decideCount})`}
+                {deciding ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide observed values & attendance with AI (${decideCount})`}
               </button>
             </div>
           </div>

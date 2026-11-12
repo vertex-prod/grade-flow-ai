@@ -1,9 +1,9 @@
-/** BACKEND: POST /api/observed-values. Asks the AI to draft AO/SO/RO/NO ratings from grade summaries (no names or LRNs are sent). */
+/** BACKEND: POST /api/observed-values. Asks the AI to draft AO/SO/RO/NO ratings and days absent from grade summaries (no names or LRNs are sent). */
 import { NextResponse } from 'next/server';
 import { guard, HttpError, limiter } from '@/server/core/guard';
 import { toResponse } from '@/server/core/http';
 import { AiError, callAi } from '@/server/core/llm';
-import { decideObservedValues, type LearnerSummary } from '@/server/observed/values';
+import { decideObservedValues, type Absences, type LearnerSummary } from '@/server/observed/values';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -17,14 +17,16 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => null)) as { learners?: unknown } | null;
     if (!body || !Array.isArray(body.learners) || !body.learners.length) throw new HttpError(400, 'No learners were sent.');
     if (body.learners.length > MAX_LEARNERS) throw new HttpError(413, `At most ${MAX_LEARNERS} learners at a time.`);
-    const learners: LearnerSummary[] = body.learners.map((raw: { id?: unknown; quarterAverage?: Record<string, unknown>; failing?: unknown }) => ({
+    const learners: LearnerSummary[] = body.learners.map((raw: { id?: unknown; quarterAverage?: Record<string, unknown>; failing?: unknown; schoolDays?: Record<string, unknown> }) => ({
       id: Number(raw?.id),
       quarterAverage: { q1: quarter(raw?.quarterAverage?.q1), q2: quarter(raw?.quarterAverage?.q2), q3: quarter(raw?.quarterAverage?.q3), q4: quarter(raw?.quarterAverage?.q4) },
-      failing: Number.isInteger(raw?.failing) ? Number(raw.failing) : 0
+      failing: Number.isInteger(raw?.failing) ? Number(raw.failing) : 0,
+      schoolDays: Object.fromEntries(Object.entries(raw?.schoolDays && typeof raw.schoolDays === 'object' ? raw.schoolDays : {}).filter(([, v]) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 31)) as Record<string, number>
     })).filter((l: LearnerSummary) => Number.isFinite(l.id));
     if (!learners.length) throw new HttpError(400, 'No valid learners were sent.');
-    const result = await decideObservedValues(learners, callAi, () => limiter.takeCall());
-    return NextResponse.json({ values: Object.fromEntries(result) });
+    const absences = new Map<number, Absences>();
+    const result = await decideObservedValues(learners, callAi, () => limiter.takeCall(), absences);
+    return NextResponse.json({ values: Object.fromEntries(result), absences: Object.fromEntries(absences) });
   } catch (error) {
     if (error instanceof AiError) return NextResponse.json({ detail: error.message }, { status: error.kind === 'config' ? 503 : 502 });
     return toResponse(error);
