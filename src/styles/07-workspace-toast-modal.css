@@ -129,3 +129,6 @@
 .row-menu-list a:hover, .row-menu-list button:hover { background: var(--ice); }
 .row-menu-list .icon { width: 13px; height: 13px; }
 .row-menu-list .danger { color: #b42318; }
+
+/* Page sections animate in, so each one is its own layer. Lift the one with an open row menu so the menu is not covered by the box below it. */
+.page.active > .workspace-card:has(.row-menu-list) { position: relative; z-index: 30; }
