@@ -1,6 +1,7 @@
 /** Help: the workflow, a glossary of terms and the keyboard shortcuts. */
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
+import { pathFor } from '@/lib/domain/routes';
 
 const STEPS = [
   ['Upload your grade sheet', 'Upload your SF9 class grade sheet, your SF10 record, or both. CSV and Excel files are supported. The columns are mapped automatically and every grade is copied from your file.'],
@@ -71,7 +72,7 @@ export default function HelpPage() {
         </div>
       </div>
       <div className="page-actions">
-        <Link className="btn btn-primary" href="/upload"><Icon name="upload" /> Go to upload</Link>
+        <Link className="btn btn-primary" href={pathFor('upload')}><Icon name="upload" /> Go to upload</Link>
       </div>
     </section>
   );

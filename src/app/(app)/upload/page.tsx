@@ -9,6 +9,7 @@ import { Reading } from '@/components/ui/Reading';
 import { useUi } from '@/components/layout/Providers';
 import { importSf10, importSf9, removeSf10Undoable, removeSf9Undoable, validateBeforeProcessing } from '@/lib/state/actions';
 import { formatFileSize } from '@/lib/domain/format';
+import { pathFor } from '@/lib/domain/routes';
 import { getState, setState, useAppState } from '@/lib/state/store';
 
 export default function UploadPage() {
@@ -88,7 +89,7 @@ export default function UploadPage() {
     if (problem) { setError(problem); toast(problem.split('\n')[0], 'error'); return; }
     setError('');
     setState({ processed: false, processing: false, progress: 0, generated: false, generatedAt: null });
-    router.push(getState().upload ? '/report-card' : '/sf10');
+    router.push(pathFor(getState().upload ? 'report-card' : 'sf10'));
   }
 
   return (

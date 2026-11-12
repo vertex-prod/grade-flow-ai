@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useUi } from '@/components/layout/Providers';
 import { formatFileSize, prettyYear } from '@/lib/domain/format';
+import { pathFor } from '@/lib/domain/routes';
 import { averageLabel, reportContext } from '@/lib/domain/grading';
 import { downloadReportCards, printReportCards } from '@/lib/pdf/sf9';
 import { setState, useAppState } from '@/lib/state/store';
@@ -69,7 +70,7 @@ export default function GeneratedReportsPage() {
           <span className="pill pill-blue">Final step · Print</span>
         </div>
         <div className="info-strip"><Icon name="info" /><div><strong>No reports generated yet</strong><p>Upload a class, check the SF9 preview, then choose Generate.</p></div></div>
-        <div className="page-actions"><Link className="btn btn-primary" href={state.students.length ? '/report-card' : '/upload'}>{state.students.length ? 'Go to preview' : 'Go to upload'}</Link></div>
+        <div className="page-actions"><Link className="btn btn-primary" href={pathFor(state.students.length ? 'report-card' : 'upload')}>{state.students.length ? 'Go to preview' : 'Go to upload'}</Link></div>
       </section>
     );
   }
@@ -152,7 +153,7 @@ export default function GeneratedReportsPage() {
             <Icon name="folder" />
             <div><strong>Saved for whenever you need them</strong><p>These final reports stay in this workspace session. Download the PDF now, or print another copy later.</p></div>
           </div>
-          <div className="page-actions"><Link className="btn btn-secondary" href="/report-card"><Icon name="arrow-left" /> Back to preview</Link></div>
+          <div className="page-actions"><Link className="btn btn-secondary" href={pathFor('report-card')}><Icon name="arrow-left" /> Back to preview</Link></div>
         </div>
 
         <aside className="reports-side">

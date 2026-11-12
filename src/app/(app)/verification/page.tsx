@@ -10,6 +10,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useUi } from '@/components/layout/Providers';
 import { ALL_SUBJECTS, ATTENDANCE_MONTHS, semestersFor, subjectsFor } from '@/lib/domain/curriculum';
 import { initials, prettyYear } from '@/lib/domain/format';
+import { pathFor } from '@/lib/domain/routes';
 import {
   approvedCount, averageGrade, averageLabel, gradeScaleDescription, isValidGrade, missingGradeCells, reviewedCommentCount, scaleMinimum, studentStatus
 } from '@/lib/domain/grading';
@@ -189,7 +190,7 @@ export default function VerificationPage() {
     setError('');
     const at = selected ? students.findIndex((s) => s.id === selected.id) : -1;
     if (at > -1) setState({ previewIndex: at });
-    router.push('/report-card');
+    router.push(pathFor('report-card'));
     toast('Grades approved. Your report cards are ready to preview.');
   }
 
@@ -412,7 +413,7 @@ export default function VerificationPage() {
       </article>
 
       <div className="page-actions">
-        <Link className="btn btn-secondary" href="/upload"><Icon name="arrow-left" /> Back to upload</Link>
+        <Link className="btn btn-secondary" href={pathFor('upload')}><Icon name="arrow-left" /> Back to upload</Link>
         <div className="action-end">
           <span className="action-note">{missing === 0 ? 'All grades complete · Ready to preview' : `${missing} missing grade${missing === 1 ? '' : 's'} · Correct ${missing === 1 ? 'it' : 'them'} in the table above`}</span>
           <button type="button" className="btn btn-primary" onClick={goPreview}>Preview report cards <Icon name="chevron-right" /></button>
