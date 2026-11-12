@@ -9,6 +9,7 @@ import { Icon, type IconName } from '@/components/ui/Icon';
 import { useUi } from '@/components/layout/Providers';
 import { SaveStatus } from '@/components/layout/SaveStatus';
 import { PAGE_META, STEP_ORDER } from '@/lib/domain/curriculum';
+import { pathFor, pageForPath } from '@/lib/domain/routes';
 import { formatDate } from '@/lib/domain/format';
 import { allCommentsReviewed, missingGradeCells } from '@/lib/domain/grading';
 import { saveNow, useAppState } from '@/lib/state/store';
@@ -48,7 +49,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const page = (pathname.replace(/^\//, '') || 'upload') as PageId;
+  const page = pageForPath(pathname) ?? 'upload';
   const meta = PAGE_META[page] ?? PAGE_META.upload;
   const stepPage = page === 'verification' ? 'report-card' : page === 'generated-reports' ? 'sf10' : page;
   const stepIndex = STEP_ORDER.indexOf(stepPage);
@@ -81,9 +82,9 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const missing = missingGradeCells(state.students);
-  const items: { icon: IconName; title: string; text: string; link?: string; linkLabel?: string }[] = [];
+  const items: { icon: IconName; title: string; text: string; link?: PageId; linkLabel?: string }[] = [];
   if (missing.length) {
-    items.push({ icon: 'alert-triangle', title: `${missing.length} grade${missing.length === 1 ? '' : 's'} need review`, text: `${missing[0].student.name} · ${missing[0].subject.name}`, link: '/verification', linkLabel: 'Review grades' });
+    items.push({ icon: 'alert-triangle', title: `${missing.length} grade${missing.length === 1 ? '' : 's'} need review`, text: `${missing[0].student.name} · ${missing[0].subject.name}`, link: 'verification', linkLabel: 'Review grades' });
   }
   if (!items.length) items.push({ icon: 'check-circle', title: 'You are all caught up', text: 'There are no grade checks waiting for you right now.' });
   const showDot = missing.length > 0 || (state.students.length > 0 && !allCommentsReviewed(state.students));
@@ -91,7 +92,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="sidebar" aria-label="Main navigation">
-        <Link className="brand" href="/upload" aria-label="GradeFlow AI home">
+        <Link className="brand" href={pathFor('upload')} aria-label="GradeFlow AI home">
           <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
             <rect width="64" height="64" rx="16" fill="currentColor" />
             <path d="M44.3 23.4A15 15 0 1 0 47 32" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
@@ -101,13 +102,13 @@ export function Shell({ children }: { children: ReactNode }) {
         </Link>
         <nav className="nav-links">
           {NAV.map((item) => (
-            <Link key={item.page} href={`/${item.page}`} className={`nav-link nav-action${meta.nav === item.page ? ' active' : ''}`} aria-current={meta.nav === item.page ? 'page' : undefined}>
+            <Link key={item.page} href={pathFor(item.page)} className={`nav-link nav-action${meta.nav === item.page ? ' active' : ''}`} aria-current={meta.nav === item.page ? 'page' : undefined}>
               <Icon name={item.icon} /><span>{item.label}</span>
             </Link>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <Link className="help-card" href="/help">
+          <Link className="help-card" href={pathFor('help')}>
             <span className="help-icon"><Icon name="help" /></span>
             <strong>Help</strong>
             <span>Steps for preparing and printing report cards.</span>
@@ -151,7 +152,7 @@ export function Shell({ children }: { children: ReactNode }) {
               {items.map((item) => (
                 <div className="notification-item" key={item.title}>
                   <Icon name={item.icon} />
-                  <div><strong>{item.title}</strong>{item.text}{item.link && <> <Link href={item.link}>{item.linkLabel}</Link></>}</div>
+                  <div><strong>{item.title}</strong>{item.text}{item.link && <> <Link href={pathFor(item.link)}>{item.linkLabel}</Link></>}</div>
                 </div>
               ))}
             </div>
@@ -164,7 +165,7 @@ export function Shell({ children }: { children: ReactNode }) {
               {STEPS.map((step, index) => {
                 const done = index < stepIndex, active = index === stepIndex;
                 return (
-                  <Link key={step.page} className={`step-link${active ? ' active' : ''}${done ? ' completed' : ''}`} href={`/${step.page}`} aria-current={active ? 'step' : undefined}>
+                  <Link key={step.page} className={`step-link${active ? ' active' : ''}${done ? ' completed' : ''}`} href={pathFor(step.page)} aria-current={active ? 'step' : undefined}>
                     <span className="step-marker"><span className="step-number">{index + 1}</span><Icon name="check" className="step-check" /></span>
                     <span className="step-label">{step.label}</span>
                   </Link>

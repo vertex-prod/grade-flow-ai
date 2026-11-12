@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useUi } from '@/components/layout/Providers';
 import { removeSf10Undoable, removeSf9Undoable } from '@/lib/state/actions';
 import { formatDate, prettyYear } from '@/lib/domain/format';
+import { pathFor } from '@/lib/domain/routes';
 import { useAppState } from '@/lib/state/store';
 
 export default function HistoryPage() {
@@ -51,7 +52,7 @@ export default function HistoryPage() {
                 </span>
               </div>
               <span className={`status-badge ${state.generated ? 'status-approved' : 'status-needs'}`}>{state.generated ? 'Ready' : 'Draft'}</span>
-              <Link className="btn btn-secondary btn-sm" href={state.generated ? '/generated-reports' : '/report-card'}>
+              <Link className="btn btn-secondary btn-sm" href={pathFor(state.generated ? 'generated-reports' : 'report-card')}>
                 {state.generated ? 'Open current reports' : 'Continue'}
               </Link>
               <button type="button" className="btn btn-secondary btn-sm" aria-label="Delete the SF9 reports"
@@ -68,7 +69,7 @@ export default function HistoryPage() {
                 <span>{state.sf10File?.name ?? 'Built from the class grades'} · {sf10Count} learner{sf10Count === 1 ? '' : 's'}</span>
               </div>
               <span className="status-badge status-approved">Ready</span>
-              <Link className="btn btn-secondary btn-sm" href="/sf10">Open</Link>
+              <Link className="btn btn-secondary btn-sm" href={pathFor('sf10')}>Open</Link>
               <button type="button" className="btn btn-secondary btn-sm" aria-label="Delete the SF10 records"
                 onClick={() => confirmDelete('the SF10 records', `${sf10Count} learner${sf10Count === 1 ? '' : 's'} read from ${state.sf10File?.name ?? 'the file'}.`, removeSf10Undoable)}>
                 <Icon name="x" /> Delete
@@ -82,7 +83,7 @@ export default function HistoryPage() {
                 <strong>Nothing here yet</strong>
                 <span>Upload a grade sheet to start a report set.</span>
               </div>
-              <Link className="btn btn-primary btn-sm" style={{ gridColumn: '-2 / -1' }} href="/upload">Go to upload</Link>
+              <Link className="btn btn-primary btn-sm" style={{ gridColumn: '-2 / -1' }} href={pathFor('upload')}>Go to upload</Link>
             </div>
           )}
         </div>

@@ -21,3 +21,7 @@ Grade_flow_AI/
 ```
 
 Rule: code in `src/server/` is backend only; `src/components/` and `src/lib/` are frontend. Frontend code must not import from `src/server/`.
+
+## Routes
+
+Every page is shown at a fixed, opaque path (for example `/k8m2q7` for Upload). The readable folder names above stay internal: `next.config.ts` rewrites the opaque path to the real page and redirects the old readable path to the opaque one, so bookmarks keep working. The mapping lives in `src/lib/domain/routes.ts`; use `pathFor(page)` for links instead of hard-coding a path.

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { useTheme } from '@/components/layout/Shell';
 import { prettyYear } from '@/lib/domain/format';
+import { pathFor } from '@/lib/domain/routes';
 import { useAppState } from '@/lib/state/store';
 
 function Details({ rows }: { rows: [string, string][] }) {
@@ -37,13 +38,13 @@ export default function SettingsPage() {
           <div className="card-heading"><h2>Class and term</h2><p>Used to identify this report set.</p></div>
           <Details rows={[['Class', state.className], ['Term', state.term], ['Academic year', prettyYear(state.year)],
             ['Grading scale', state.gradingScale === 'deped' ? 'DepEd · 60–100' : 'Percentage · 0–100']]} />
-          <Link className="btn btn-secondary btn-sm workspace-card-action" href="/upload">Edit class details</Link>
+          <Link className="btn btn-secondary btn-sm workspace-card-action" href={pathFor('upload')}>Edit class details</Link>
         </article>
         <article className="card workspace-card">
           <div className="card-heading"><h2>Print preferences</h2><p>Choose paper and layout options before printing.</p></div>
           <Details rows={[['Paper size', state.paperSize.toUpperCase()], ['Orientation', state.orientation.charAt(0).toUpperCase() + state.orientation.slice(1)],
             ['Print layout', state.printLayout === 'double' ? 'Duplex · Sheet estimate' : 'Single-sided · Sheet estimate']]} />
-          <Link className="btn btn-secondary btn-sm workspace-card-action" href="/generated-reports">Manage print settings</Link>
+          <Link className="btn btn-secondary btn-sm workspace-card-action" href={pathFor('generated-reports')}>Manage print settings</Link>
         </article>
         <article className="card workspace-card">
           <div className="card-heading"><h2>Appearance</h2><p>Choose a comfortable look for your workspace.</p></div>

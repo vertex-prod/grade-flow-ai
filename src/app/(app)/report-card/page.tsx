@@ -14,6 +14,7 @@ import { applySf9Details, emptySf9Details, sf9Issues, TRANSFER_DETAILS, type Sf9
 import { applyObservedValues, askObservedValues } from '@/lib/sf9/observed';
 import { learnerMeta } from '@/lib/sf10/record';
 import { formatFileSize } from '@/lib/domain/format';
+import { pathFor } from '@/lib/domain/routes';
 import { getState, setState, useAppState } from '@/lib/state/store';
 import type { Student } from '@/lib/domain/types';
 
@@ -290,7 +291,7 @@ export default function ReportCardPage() {
           <Icon name="alert-triangle" />
           <div><strong>Needs checking</strong><ul>{(issuesBy.get(student.id) ?? []).map((i) => <li key={i.text}>{i.text}</li>)}</ul></div>
           {(issuesBy.get(student.id) ?? []).some((i) => i.kind !== 'grade') && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditOpen(true)}>Fill in details</button>}
-          {(issuesBy.get(student.id) ?? []).some((i) => i.kind === 'grade') && <Link className="btn btn-secondary btn-sm" href="/verification">Fix grades</Link>}
+          {(issuesBy.get(student.id) ?? []).some((i) => i.kind === 'grade') && <Link className="btn btn-secondary btn-sm" href={pathFor('verification')}>Fix grades</Link>}
         </div>
       )}
 
