@@ -280,17 +280,20 @@ export default function ReportCardPage() {
                 toast(result.changed || globalChange ? `Updated ${result.changed} learner${result.changed === 1 ? '' : 's'}${globalChange ? ' and the school details' : ''}.` : 'Nothing to change. The fields were empty, or already filled in (turn on "Replace values already filled in").', result.changed || globalChange ? 'success' : 'info');
               }}>Apply</button>
             </div>
-            <div className="sf10-actions sf10-ai-actions">
-              <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'values' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'values'} style={deciding?.what === 'values' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('values')}
+            <div className="sf9-ai-block">
+              <div className="sf9-ai-head"><Icon name="sparkles" /><div><strong>Let the AI draft the rest</strong><span>Uses the learners and the &quot;Replace values already filled in&quot; choice above. Draft only: review it before printing.</span></div></div>
+              <div className="sf9-ai-grid">
+              <div className="sf9-ai-item"><button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'values' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'values'} style={deciding?.what === 'values' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('values')}
                 title="The AI drafts the observed values (AO, SO, RO, NO) from each learner's grades. Attendance is not changed.">
                 <Icon name="sparkles" className="ai-sparkle" />
                 {deciding?.what === 'values' ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide observed values with AI (${decideCount})`}
-              </button>
-              <button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'attendance' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'attendance'} style={deciding?.what === 'attendance' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('attendance')}
+              </button><small>Observed values (AO, SO, RO, NO) for every quarter, based on grades.</small></div>
+              <div className="sf9-ai-item"><button type="button" className={`btn btn-secondary btn-sm btn-ai${deciding?.what === 'attendance' ? ' working' : ''}`} disabled={Boolean(deciding) || !decideCount} aria-busy={deciding?.what === 'attendance'} style={deciding?.what === 'attendance' ? ({ '--ai-progress': `${percent}%` } as React.CSSProperties) : undefined} onClick={() => void decideValues('attendance')}
                 title="The AI drafts the monthly attendance (school days, days present and absent) from each learner's grades. Observed values are not changed.">
                 <Icon name="sparkles" className="ai-sparkle" />
                 {deciding?.what === 'attendance' ? <span>The AI is deciding · <strong className="ai-percent">{percent}%</strong>{deciding.total > 1 ? ` (${deciding.done} of ${deciding.total})` : ''}</span> : `Decide attendance with AI (${decideCount})`}
-              </button>
+              </button><small>School days, days present and days absent for every month, based on grades.</small></div>
+              </div>
             </div>
           </div>
         )}
