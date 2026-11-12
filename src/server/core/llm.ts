@@ -7,7 +7,7 @@
  * The model returns JSON that matches a schema; code validates it afterwards.
  */
 export const PROVIDERS: Record<string, { base: string; model: string; needsKey: boolean }> = {
-  gemini: { base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash', needsKey: true },
+  gemini: { base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.5-flash-lite', needsKey: true },
   groq: { base: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', needsKey: true },
   openrouter: { base: 'https://openrouter.ai/api/v1', model: 'meta-llama/llama-3.3-70b-instruct:free', needsKey: true },
   ollama: { base: 'http://localhost:11434/v1', model: 'llama3.1', needsKey: false }
